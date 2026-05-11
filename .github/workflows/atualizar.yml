@@ -1,0 +1,23 @@
+name: Atualizar CSVs
+
+on:
+  push:
+    paths:
+      - 'fLista_DH_tempos.csv'
+      - 'OBs_Pagas_Novo.csv'
+
+jobs:
+  converter:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install pandas
+      - run: python converter.py
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add dh_tempos.csv obs_pagas.csv
+          git diff --staged --quiet || git commit -m "Dados atualizados $(date '+%d/%m/%Y')"
+          git push
