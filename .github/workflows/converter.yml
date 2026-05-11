@@ -1,0 +1,33 @@
+name: Converter XLS para CSV
+
+on:
+  push:
+    paths:
+      - 'fLista_DH_tempos.xls'
+      - 'fLista_DH_tempos.xlsx'
+      - 'OBs_Pagas_Novo.xls'
+      - 'OBs_Pagas_Novo.xlsx'
+
+jobs:
+  converter:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+
+      - name: Instalar Python e dependências
+        run: pip install pandas openpyxl xlrd
+
+      - name: Converter XLS para CSV
+        run: python converter.py
+
+      - name: Publicar CSVs atualizados
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add dh_tempos.csv obs_pagas.csv
+          git diff --staged --quiet || git commit -m "Dados atualizados $(date '+%d/%m/%Y %H:%M')"
+          git push
