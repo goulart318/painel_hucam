@@ -311,6 +311,7 @@ function loadCSVs() {
     });
 
     ALL = obs.map(r => {
+      console.log(r);
 
       const np  = String(r['NP'] || '').trim();
 
@@ -372,7 +373,7 @@ function loadCSVs() {
   });
 }
 
-  console.log(r);
+  
 
 // ── INIT ──
 function init() {
