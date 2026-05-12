@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OBs Pagas – HUCAM/UFES</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f4f8;color:#1a2535;font-size:14px}
+.hdr{background:linear-gradient(135deg,#1a3a5c 0%,#0e2340 100%);color:#fff;padding:18px 28px;display:flex;align-items:center;gap:16px;box-shadow:0 2px 12px rgba(0,0,0,.3)}
+.hdr-icon{font-size:2rem}
+.hdr h1{font-size:1.3rem;font-weight:700}
+.hdr p{font-size:.78rem;opacity:.75;margin-top:2px}
+.hdr-meta{margin-left:auto;text-align:right;font-size:.72rem;opacity:.8;line-height:1.8}
+.upd{display:inline-flex;align-items:center;gap:5px}
+.dot{width:7px;height:7px;border-radius:50%;background:#2ecc71;flex-shrink:0}
+#overlay{position:fixed;inset:0;background:rgba(10,18,32,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;color:#fff;gap:14px}
+.spin{width:46px;height:46px;border:4px solid rgba(255,255,255,.15);border-top-color:#3b9eff;border-radius:50%;animation:sp .7s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+#overlay p{font-size:.95rem;opacity:.8}
+#erro{display:none;background:#fff1f0;border:1px solid #ffa39e;border-radius:10px;padding:18px 22px;margin:20px 24px;color:#a8071a}
+#erro code{font-size:.8rem;background:#fff;padding:8px 12px;display:block;border-radius:6px;margin-top:8px;word-break:break-all}
+.main{padding:20px 24px;max-width:1600px;margin:0 auto}
+.tabs{display:flex;gap:3px;margin-bottom:18px;border-bottom:2px solid #d0dae4}
+.tab{padding:10px 20px;cursor:pointer;border-radius:6px 6px 0 0;background:transparent;border:none;color:#5d7285;font-size:.86rem;font-weight:600;transition:all .15s}
+.tab:hover{background:#d6eaf8;color:#1a5276}
+.tab.on{background:#1a3a5c;color:#fff}
+.panel{display:none}
+.panel.on{display:block}
+.filters{background:#fff;border:1px solid #d0dae4;border-radius:10px;padding:14px 18px;margin-bottom:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+.fg{display:flex;flex-direction:column;gap:4px;min-width:130px}
+.fg label{font-size:.7rem;font-weight:700;color:#5d7285;text-transform:uppercase;letter-spacing:.5px}
+.fg select,.fg input{padding:7px 10px;border:1px solid #d0dae4;border-radius:6px;background:#fff;color:#1a2535;font-size:.83rem;outline:none}
+.fg select:focus,.fg input:focus{border-color:#2980b9;box-shadow:0 0 0 2px rgba(41,128,185,.15)}
+.btn{padding:8px 16px;border:none;border-radius:6px;cursor:pointer;font-size:.83rem;font-weight:600;transition:all .15s}
+.btn-p{background:#1a3a5c;color:#fff}
+.btn-p:hover{background:#2980b9}
+.btn-s{background:#f0f4f8;color:#5d7285;border:1px solid #d0dae4}
+.btn-s:hover{background:#d0dae4}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-bottom:16px}
+.kpi{background:#fff;border:1px solid #d0dae4;border-radius:10px;padding:16px 18px;border-left:4px solid #1a3a5c}
+.kpi.g{border-left-color:#1e8449}.kpi.a{border-left-color:#e67e22}.kpi.r{border-left-color:#c0392b}
+.kpi-lbl{font-size:.68rem;font-weight:700;color:#5d7285;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
+.kpi-val{font-size:1.45rem;font-weight:800;line-height:1}
+.kpi-sub{font-size:.72rem;color:#5d7285;margin-top:4px}
+.crow{display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-bottom:14px}
+.crow2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.cc{background:#fff;border:1px solid #d0dae4;border-radius:10px;padding:16px}
+.cc h3{font-size:.78rem;font-weight:700;color:#1a3a5c;text-transform:uppercase;letter-spacing:.4px;margin-bottom:12px}
+.cw{position:relative;height:210px}
+.fb{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+.fn{font-size:.74rem;flex:0 0 200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ft{flex:1;background:#eef2f7;border-radius:4px;height:16px;overflow:hidden}
+.ff{height:100%;background:linear-gradient(90deg,#2980b9,#1a3a5c);border-radius:4px;transition:width .5s ease}
+.fv{font-size:.72rem;font-weight:700;color:#1e8449;min-width:85px;text-align:right}
+.tc{background:#fff;border:1px solid #d0dae4;border-radius:10px;padding:16px;margin-bottom:16px}
+.th{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:6px}
+.th h3{font-size:.78rem;font-weight:700;color:#1a3a5c;text-transform:uppercase;letter-spacing:.4px}
+.ti{font-size:.72rem;color:#5d7285}
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.8rem}
+thead th{background:#1a3a5c;color:#fff;padding:8px 10px;text-align:left;font-size:.72rem;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap}
+tbody tr{border-bottom:1px solid #eef2f7}
+tbody tr:hover{background:#f4f8fc}
+tbody td{padding:7px 10px;vertical-align:top}
+.mono{font-family:monospace;font-size:.75rem;color:#5d7285}
+.vd{font-weight:700;color:#1e8449;text-align:right;white-space:nowrap}
+.nat{color:#5d7285;font-size:.76rem}
+.badge{display:inline-block;padding:2px 7px;border-radius:20px;font-size:.68rem;font-weight:700;text-transform:uppercase}
+.b-ob{background:#d5f5e3;color:#1e8449}.b-df{background:#fef9e7;color:#9a7d0a}.b-np{background:#ebf5fb;color:#1a5276}
+.pag{display:flex;align-items:center;justify-content:center;gap:5px;margin-top:12px;flex-wrap:wrap}
+.pb{padding:5px 11px;border:1px solid #d0dae4;background:#fff;border-radius:5px;cursor:pointer;font-size:.78rem;transition:all .15s}
+.pb:hover:not([disabled]){background:#d6eaf8;border-color:#2980b9}
+.pb.on{background:#1a3a5c;color:#fff;border-color:#1a3a5c}
+.pb[disabled]{opacity:.35;cursor:not-allowed}
+.mbk{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;z-index:1000;align-items:center;justify-content:center}
+.mbk.open{display:flex}
+.modal{background:#fff;border-radius:12px;padding:26px;max-width:640px;width:92%;max-height:88vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);position:relative}
+.modal h2{font-size:1rem;color:#1a3a5c;margin-bottom:14px}
+.mc{position:absolute;top:14px;right:14px;background:none;border:none;font-size:1.3rem;cursor:pointer;color:#5d7285}
+.dg{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.di{background:#f0f4f8;border-radius:8px;padding:10px}
+.di label{font-size:.68rem;font-weight:700;color:#5d7285;text-transform:uppercase;display:block;margin-bottom:3px}
+.di span{font-size:.85rem;font-weight:600}
+.di.full{grid-column:1/-1}
+.dival{font-size:1.2rem!important;color:#1e8449!important}
+@media(max-width:768px){.crow,.crow2{grid-template-columns:1fr}.main{padding:12px}.fn{flex:0 0 130px}}
+</style>
+</head>
+<body>
+
+<div id="overlay">
+  <div class="spin"></div>
+  <p>Carregando dados...</p>
+</div>
+
+<div id="erro">
+  <h3>⚠️ Erro ao carregar dados</h3>
+  <div id="erro-msg"></div>
+</div>
+
+<div class="hdr">
+  <div class="hdr-icon">🏥</div>
+  <div>
+    <h1>Ordens Bancárias Pagas — HUCAM/UFES</h1>
+    <p>Consulta de documentos pagos · Fornecedores e Gestores de Contratos</p>
+  </div>
+  <div class="hdr-meta">
+    <div class="upd"><span class="dot"></span><span id="upd-txt">carregando...</span></div>
+    <div id="periodo-txt"></div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="tabs">
+    <button class="tab on" onclick="showTab('dash')">📊 Dashboard</button>
+    <button class="tab" onclick="showTab('cons')">🔍 Consulta</button>
+    <button class="tab" onclick="showTab('forn')">🏢 Fornecedor</button>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div id="tab-dash" class="panel on">
+    <div class="filters">
+      <div class="fg"><label>Ano</label><select id="d-ano"><option value="">Todos</option></select></div>
+      <div class="fg"><label>Natureza Despesa</label><select id="d-nat"><option value="">Todas</option></select></div>
+      <div class="fg"><label>Data Início</label><input type="date" id="d-d1"></div>
+      <div class="fg"><label>Data Fim</label><input type="date" id="d-d2"></div>
+      <div style="display:flex;gap:8px;align-items:flex-end">
+        <button class="btn btn-p" onclick="applyDash()">🔎 Aplicar</button>
+        <button class="btn btn-s" onclick="clearDash()">✕ Limpar</button>
+      </div>
+    </div>
+    <div class="kpis" id="kpis"></div>
+    <div class="crow">
+      <div class="cc"><h3>📈 Pagamentos Mensais (R$)</h3><div class="cw"><canvas id="cMes"></canvas></div></div>
+      <div class="cc"><h3>🥧 Por Natureza</h3><div class="cw"><canvas id="cNat"></canvas></div></div>
+    </div>
+    <div class="crow2">
+      <div class="cc"><h3>🏆 Top 10 Fornecedores</h3><div id="fbars"></div></div>
+      <div class="cc"><h3>📋 Por Ano</h3><div class="cw"><canvas id="cAno"></canvas></div></div>
+    </div>
+  </div>
+
+  <!-- CONSULTA -->
+  <div id="tab-cons" class="panel">
+    <div class="filters">
+      <div class="fg" style="min-width:210px">
+        <label>Buscar (NP, NF, Fornecedor, Empenho)</label>
+        <input type="text" id="q-txt" placeholder="Digite para buscar..." oninput="applyConsulta()">
+      </div>
+      <div class="fg"><label>Ano</label><select id="q-ano" onchange="applyConsulta()"><option value="">Todos</option></select></div>
+      <div class="fg"><label>Natureza</label><select id="q-nat" onchange="applyConsulta()"><option value="">Todas</option></select></div>
+      <div class="fg"><label>Tipo Doc.</label>
+        <select id="q-tipo" onchange="applyConsulta()">
+          <option value="">Todos</option>
+          <option value="OB">OB – Ordem Bancária</option>
+          <option value="DF">DF – Devolução/Tributo</option>
+        </select>
+      </div>
+      <button class="btn btn-s" onclick="clearConsulta()" style="align-self:flex-end">✕ Limpar</button>
+    </div>
+    <div class="tc">
+      <div class="th"><h3>📄 Documentos Pagos</h3><span class="ti" id="q-info"></span></div>
+      <div class="tw">
+        <table>
+          <thead><tr>
+            <th>Tipo</th><th>NP</th><th>Empenho</th><th>NF</th>
+            <th>Fornecedor</th><th>Natureza</th><th>Emissão</th><th>Pagamento</th>
+            <th style="text-align:right">Valor (R$)</th><th></th>
+          </tr></thead>
+          <tbody id="q-body"></tbody>
+        </table>
+      </div>
+      <div class="pag" id="q-pag"></div>
+    </div>
+  </div>
+
+  <!-- FORNECEDOR -->
+  <div id="tab-forn" class="panel">
+    <div class="filters">
+      <div class="fg" style="min-width:300px">
+        <label>Fornecedor</label>
+        <select id="f-sel"><option value="">— Selecione —</option></select>
+      </div>
+      <div class="fg"><label>Ano</label><select id="f-ano"><option value="">Todos</option></select></div>
+      <button class="btn btn-p" onclick="applyForn()" style="align-self:flex-end">📋 Consultar</button>
+    </div>
+    <div id="f-detail" style="display:none">
+      <div class="kpis" id="f-kpis"></div>
+      <div class="crow2" style="margin-bottom:14px">
+        <div class="cc"><h3>📈 Evolução Mensal</h3><div class="cw"><canvas id="cFM"></canvas></div></div>
+        <div class="cc"><h3>🥧 Por Natureza</h3><div class="cw"><canvas id="cFN"></canvas></div></div>
+      </div>
+      <div class="tc">
+        <div class="th"><h3>📄 Documentos</h3><span class="ti" id="f-info"></span></div>
+        <div class="tw">
+          <table>
+            <thead><tr>
+              <th>Tipo</th><th>NP</th><th>NF</th><th>Natureza</th>
+              <th>Emissão</th><th>Pagamento</th>
+              <th style="text-align:right">Valor (R$)</th><th></th>
+            </tr></thead>
+            <tbody id="f-body"></tbody>
+          </table>
+        </div>
+        <div class="pag" id="f-pag"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="mbk" id="modal" onclick="closeMod(event)">
+  <div class="modal">
+    <button class="mc" onclick="document.getElementById('modal').classList.remove('open')">✕</button>
+    <h2>📄 Detalhe do Documento</h2>
+    <div id="mod-body"></div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// CONFIGURAÇÃO DOS ARQUIVOS CSV
+// Para GitHub Pages use a URL raw:
+//   https://raw.githubusercontent.com/goulart318/painel_hucam/main/dh_tempos.csv
+// Para uso local use apenas o nome do arquivo
+// ============================================================
+const CSV_DH  = 'dh_tempos.csv';
+const CSV_OBS = 'obs_pagas.csv';
+// ============================================================
+
+const PAGE = 25;
+let ALL = [], FD = [], FC = [], FF = [];
+let charts = {};
+const COLORS = ['#1a3a5c','#2980b9','#1e8449','#27ae60','#e67e22','#d35400','#8e44ad','#c0392b','#16a085','#2c3e50'];
+
+// ── UTILS ──
+// Converte valor BR "1.234,56" para número
+const parseBR = s => {
+  if(!s || s==='' ) return 0;
+  return parseFloat(String(s).replace(/\./g,'').replace(',','.')) || 0;
+};
+const fmt = v => (v==null||v==='')?'—':parseBR(v)===0&&v!=='0'?v:parseBR(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtN = v => v==null||v===0?'—':v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+
+// Converte dd/mm/yyyy → yyyy-mm-dd
+const toISO = s => {
+  if(!s) return '';
+  s = String(s).trim();
+  const m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if(m) return `${m[3]}-${m[2]}-${m[1]}`;
+  if(/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10);
+  return s;
+};
+const fmtD = s => { if(!s) return '—'; const [y,m,d]=String(s).split('-'); return d&&m&&y?`${d}/${m}/${y}`:s; };
+const short = s => { if(!s) return ''; const m=String(s).match(/([A-Z]{2}\d+)$/); return m?m[1]:String(s).slice(-10); };
+const dType = d => { if(!d) return ''; if(d.includes('OB')) return 'OB'; if(d.includes('DF')) return 'DF'; return 'NP'; };
+const badge = d => { const t=dType(d); return t==='OB'?'<span class="badge b-ob">OB</span>':t==='DF'?'<span class="badge b-df">DF</span>':'<span class="badge b-np">NP</span>'; };
+const killC = id => { if(charts[id]){charts[id].destroy();delete charts[id];} };
+const escH = s => String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+
+// ── LOAD ──
+function loadCSVs() {
+  const baseCfg = {
+    download:true,
+    header:true,
+    delimiter:'\t',
+    skipEmptyLines:true,
+    encoding:'ISO-8859-1',
+    dynamicTyping:false
+  };
+
+  return Promise.all([
+    new Promise((res,rej) => Papa.parse(CSV_DH, {
+      ...baseCfg,
+      complete:r=>res(r.data),
+      error:e=>rej(new Error('dh_tempos.csv: '+e.message))
+    })),
+    new Promise((res,rej) => Papa.parse(CSV_OBS, {
+      ...baseCfg,
+      skipFirstNLines:1,
+      complete:r=>res(r.data),
+      error:e=>rej(new Error('obs_pagas.csv: '+e.message))
+    }))
+  ]).then(([dh, obs]) => {
+
+    // Relaciona NP (Documento Hábil) do arquivo dh_tempos
+    // com os pagamentos existentes em obs_pagas
+    const dhIdx = {};
+
+    dh.forEach(r => {
+      const np = String(r['Documento Hábil'] || '').trim();
+
+      if(!np || np === 'Total') return;
+
+      if(!dhIdx[np]) {
+        dhIdx[np] = [];
+      }
+
+      dhIdx[np].push({
+        nf: String(r['Nota Fiscal'] || '').trim(),
+        val_nf: parseBR(r['Valor da NF'] || '0'),
+        dt_pg: toISO(r['Compr. - Dia Pagamento']),
+        dt_at: toISO(r['DH - Dia Ateste']),
+        dt_nf: toISO(r['Data de Emissão da NF'])
+      });
+    });
+
+    ALL = obs.map(r => {
+
+      const np  = String(r['NP'] || '').trim();
+
+      if(!np || np === 'Total') return null;
+
+      const doc = String(r['Documento'] || '').trim();
+      const rel = (dhIdx[np] || [])[0] || {};
+
+      const fornecedor =
+        String(
+          r['Fornecedor'] ||
+          r['Unnamed: 3'] ||
+          ''
+        ).trim();
+
+      const natureza =
+        String(
+          r['Natureza_Despesa'] ||
+          r['Unnamed: 7'] ||
+          r['Natureza Despesa Detalhada'] ||
+          ''
+        ).trim();
+
+      const valorRaw =
+        r['Valor'] ||
+        r['Movim. Líquido - Moeda Origem (Item Informação)'] ||
+        '0';
+
+      return {
+        np,
+        doc,
+        emp: String(r['Empenho'] || '').trim(),
+        nat: natureza,
+        obs: String(r['Doc - Observação'] || r['Observacao'] || '').slice(0,300),
+        val: parseBR(valorRaw),
+        forn: fornecedor,
+        nf: rel.nf || '',
+        val_nf: rel.val_nf || 0,
+        dt_em: toISO(r['Emissão']),
+        dt_pg: rel.dt_pg || '',
+        dt_at: rel.dt_at || '',
+        dt_nf: rel.dt_nf || '',
+
+        get am() {
+          return this.dt_em ? this.dt_em.slice(0,7) : '';
+        },
+
+        get ano() {
+          return this.dt_em ? this.dt_em.slice(0,4) : '';
+        }
+      };
+
+    }).filter(r => r && (r.val > 0 || r.np));
+
+    FD=[...ALL];
+    FC=[...ALL];
+
+    return ALL;
+  });
+}
+
+// ── INIT ──
+function init() {
+  const anos  = [...new Set(ALL.map(r=>r.ano).filter(Boolean))].sort();
+  const nats  = [...new Set(ALL.map(r=>r.nat).filter(Boolean))].sort();
+  const forns = [...new Set(ALL.map(r=>r.forn).filter(Boolean))].sort();
+
+  ['d-ano','q-ano','f-ano'].forEach(id => {
+    const el=document.getElementById(id);
+    anos.forEach(a => el.innerHTML+=`<option value="${a}">${a}</option>`);
+  });
+  ['d-nat','q-nat'].forEach(id => {
+    const el=document.getElementById(id);
+    nats.forEach(n => el.innerHTML+=`<option value="${escH(n)}">${escH(n)}</option>`);
+  });
+  const sel=document.getElementById('f-sel');
+  forns.forEach(f => sel.innerHTML+=`<option value="${escH(f)}">${escH(f)}</option>`);
+
+  const dts=ALL.map(r=>r.dt_em).filter(Boolean).sort();
+  if(dts.length){
+    document.getElementById('d-d1').value=dts[0];
+    document.getElementById('d-d2').value=dts[dts.length-1];
+  }
+  document.getElementById('upd-txt').textContent=`Atualizado: ${new Date().toLocaleDateString('pt-BR')}`;
+  document.getElementById('periodo-txt').textContent=
+    dts.length?`${fmtD(dts[0])} a ${fmtD(dts[dts.length-1])}` :'';
+
+  renderDash(ALL);
+  renderCons(ALL,1);
+}
+
+// ── TABS ──
+function showTab(id){
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('on',['dash','cons','forn'][i]===id));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
+  document.getElementById('tab-'+id).classList.add('on');
+}
+
+// ── DASHBOARD ──
+function applyDash(){
+  const ano=document.getElementById('d-ano').value,
+        nat=document.getElementById('d-nat').value,
+        d1=document.getElementById('d-d1').value,
+        d2=document.getElementById('d-d2').value;
+  FD=ALL.filter(r=>{
+    if(ano&&r.ano!==ano)return false;
+    if(nat&&r.nat!==nat)return false;
+    if(d1&&r.dt_em<d1)return false;
+    if(d2&&r.dt_em>d2)return false;
+    return true;
+  });
+  renderDash(FD);
+}
+function clearDash(){
+  ['d-ano','d-nat'].forEach(id=>document.getElementById(id).value='');
+  const dts=ALL.map(r=>r.dt_em).filter(Boolean).sort();
+  document.getElementById('d-d1').value=dts[0]||'';
+  document.getElementById('d-d2').value=dts[dts.length-1]||'';
+  FD=[...ALL];renderDash(FD);
+}
+
+function renderDash(data){
+  const total=data.reduce((s,r)=>s+r.val,0);
+  const nNPs=new Set(data.map(r=>r.np)).size;
+  const nF=new Set(data.map(r=>r.forn).filter(Boolean)).size;
+  document.getElementById('kpis').innerHTML=`
+    <div class="kpi"><div class="kpi-lbl">Total Pago</div>
+      <div class="kpi-val">R$ ${fmtN(total)}</div>
+      <div class="kpi-sub">${data.length.toLocaleString('pt-BR')} lançamentos</div></div>
+    <div class="kpi g"><div class="kpi-lbl">Documentos Hábeis (NP)</div>
+      <div class="kpi-val">${nNPs.toLocaleString('pt-BR')}</div>
+      <div class="kpi-sub">Notas de Pagamento</div></div>
+    <div class="kpi a"><div class="kpi-lbl">Fornecedores</div>
+      <div class="kpi-val">${nF.toLocaleString('pt-BR')}</div>
+      <div class="kpi-sub">Únicos no período</div></div>
+    <div class="kpi r"><div class="kpi-lbl">Média por Lançamento</div>
+      <div class="kpi-val">R$ ${fmtN(data.length?total/data.length:0)}</div>
+      <div class="kpi-sub">Valor médio</div></div>`;
+
+  const bM={};
+  data.forEach(r=>{if(r.am)bM[r.am]=(bM[r.am]||0)+r.val;});
+  const ms=Object.keys(bM).sort();
+  killC('cMes');
+  charts.cMes=new Chart(document.getElementById('cMes'),{
+    type:'bar',
+    data:{labels:ms.map(m=>{const[y,mo]=m.split('-');return mo+'/'+y;}),
+      datasets:[{data:ms.map(m=>bM[m]),backgroundColor:'rgba(26,58,92,.75)',
+        borderColor:'#1a3a5c',borderWidth:1,borderRadius:3}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' R$ '+fmtN(c.raw)}}},
+      scales:{y:{ticks:{callback:v=>v>=1e6?'R$'+(v/1e6).toFixed(1)+'M':'R$'+(v/1e3).toFixed(0)+'k'},
+        grid:{color:'#eef2f7'}},x:{grid:{display:false}}}}});
+
+  const bN={};
+  data.forEach(r=>{if(r.nat)bN[r.nat]=(bN[r.nat]||0)+r.val;});
+  const nk=Object.keys(bN).sort((a,b)=>bN[b]-bN[a]).slice(0,8);
+  killC('cNat');
+  charts.cNat=new Chart(document.getElementById('cNat'),{
+    type:'doughnut',
+    data:{labels:nk.map(k=>k.length>22?k.slice(0,22)+'…':k),
+      datasets:[{data:nk.map(k=>bN[k]),backgroundColor:COLORS,borderWidth:2}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom',labels:{font:{size:9},boxWidth:10}},
+        tooltip:{callbacks:{label:c=>c.label+': R$ '+fmtN(c.raw)}}}}});
+
+  const bF={};
+  data.forEach(r=>{if(r.forn)bF[r.forn]=(bF[r.forn]||0)+r.val;});
+  const top=Object.entries(bF).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const mx=top[0]?top[0][1]:1;
+  document.getElementById('fbars').innerHTML=top.map(([n,v])=>`
+    <div class="fb">
+      <span class="fn" title="${escH(n)}">${escH(n)}</span>
+      <div class="ft"><div class="ff" style="width:${(v/mx*100).toFixed(1)}%"></div></div>
+      <span class="fv">${v>=1e6?'R$'+(v/1e6).toFixed(2)+'M':'R$'+(v/1e3).toFixed(1)+'k'}</span>
+    </div>`).join('');
+
+  const bA={};
+  data.forEach(r=>{if(r.ano)bA[r.ano]=(bA[r.ano]||0)+r.val;});
+  const ys=Object.keys(bA).sort();
+  killC('cAno');
+  charts.cAno=new Chart(document.getElementById('cAno'),{
+    type:'bar',
+    data:{labels:ys,datasets:[{data:ys.map(y=>bA[y]),backgroundColor:COLORS.slice(0,ys.length),borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'R$ '+fmtN(c.raw)}}},
+      scales:{y:{ticks:{callback:v=>'R$'+(v/1e6).toFixed(1)+'M'},grid:{color:'#eef2f7'}},
+        x:{grid:{display:false}}}}});
+}
+
+// ── CONSULTA ──
+function applyConsulta(){window._qd=null;_runC();}
+function clearConsulta(){
+  document.getElementById('q-txt').value='';
+  ['q-ano','q-nat','q-tipo'].forEach(id=>document.getElementById(id).value='');
+  FC=[...ALL];renderCons(FC,1);
+}
+function _runC(){
+  const txt=document.getElementById('q-txt').value.toLowerCase().trim(),
+        ano=document.getElementById('q-ano').value,
+        nat=document.getElementById('q-nat').value,
+        tipo=document.getElementById('q-tipo').value;
+  FC=ALL.filter(r=>{
+    if(ano&&r.ano!==ano)return false;
+    if(nat&&r.nat!==nat)return false;
+    if(tipo&&!r.doc.includes(tipo))return false;
+    if(txt){
+      const h=[r.np,r.nf,r.forn,r.emp,r.obs].join(' ').toLowerCase();
+      if(!h.includes(txt))return false;
+    }
+    return true;
+  });
+  renderCons(FC,1);
+}
+function renderCons(data,page){
+  window._qd=data;
+  const tot=data.length,s=(page-1)*PAGE,sl=data.slice(s,s+PAGE);
+  document.getElementById('q-info').textContent=
+    `${Math.min(s+1,tot).toLocaleString('pt-BR')}–${Math.min(s+PAGE,tot).toLocaleString('pt-BR')} de ${tot.toLocaleString('pt-BR')} registros`;
+  document.getElementById('q-body').innerHTML=sl.map(r=>`
+    <tr>
+      <td>${badge(r.doc)}</td>
+      <td class="mono">${short(r.np)}</td>
+      <td class="mono">${short(r.emp)}</td>
+      <td class="mono">${escH(r.nf)||'—'}</td>
+      <td style="font-weight:600;max-width:180px">${escH(r.forn)||'—'}</td>
+      <td class="nat">${escH(r.nat)||'—'}</td>
+      <td>${fmtD(r.dt_em)}</td>
+      <td>${fmtD(r.dt_pg)}</td>
+      <td class="vd">R$ ${fmtN(r.val)}</td>
+      <td><button class="btn btn-s" style="padding:3px 9px;font-size:.72rem"
+        onclick='openMod(${JSON.stringify(r)})'>Ver</button></td>
+    </tr>`).join('')||
+    '<tr><td colspan="10" style="text-align:center;padding:20px;color:#5d7285">Nenhum registro encontrado</td></tr>';
+  renderPag('q-pag',tot,page,'renderCons','_qd');
+}
+
+// ── FORNECEDOR ──
+function applyForn(){
+  const forn=document.getElementById('f-sel').value,
+        ano=document.getElementById('f-ano').value;
+  if(!forn)return;
+  FF=ALL.filter(r=>r.forn===forn&&(!ano||r.ano===ano));
+  window._fd=FF;
+  document.getElementById('f-detail').style.display='block';
+  const tot=FF.reduce((s,r)=>s+r.val,0);
+  document.getElementById('f-kpis').innerHTML=`
+    <div class="kpi"><div class="kpi-lbl">Total Pago</div>
+      <div class="kpi-val">R$ ${fmtN(tot)}</div>
+      <div class="kpi-sub">${FF.length} lançamentos</div></div>
+    <div class="kpi g"><div class="kpi-lbl">Documentos Hábeis</div>
+      <div class="kpi-val">${new Set(FF.map(r=>r.np)).size.toLocaleString('pt-BR')}</div></div>
+    <div class="kpi a"><div class="kpi-lbl">Notas Fiscais</div>
+      <div class="kpi-val">${new Set(FF.map(r=>r.nf).filter(Boolean)).size.toLocaleString('pt-BR')}</div></div>`;
+
+  const bM={};FF.forEach(r=>{if(r.am)bM[r.am]=(bM[r.am]||0)+r.val;});
+  const ms=Object.keys(bM).sort();
+  killC('cFM');
+  charts.cFM=new Chart(document.getElementById('cFM'),{
+    type:'line',
+    data:{labels:ms.map(m=>{const[y,mo]=m.split('-');return mo+'/'+y;}),
+      datasets:[{data:ms.map(m=>bM[m]),borderColor:'#1a3a5c',
+        backgroundColor:'rgba(26,58,92,.08)',fill:true,tension:.3,pointRadius:3}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'R$ '+fmtN(c.raw)}}},
+      scales:{y:{ticks:{callback:v=>'R$'+(v/1e3).toFixed(0)+'k'},grid:{color:'#eef2f7'}},
+        x:{grid:{display:false}}}}});
+
+  const bN={};FF.forEach(r=>{if(r.nat)bN[r.nat]=(bN[r.nat]||0)+r.val;});
+  const nk=Object.keys(bN).sort((a,b)=>bN[b]-bN[a]).slice(0,6);
+  killC('cFN');
+  charts.cFN=new Chart(document.getElementById('cFN'),{
+    type:'doughnut',
+    data:{labels:nk,datasets:[{data:nk.map(k=>bN[k]),backgroundColor:COLORS,borderWidth:2}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom',labels:{font:{size:9},boxWidth:10}},
+        tooltip:{callbacks:{label:c=>c.label+': R$ '+fmtN(c.raw)}}}}});
+
+  renderForn(FF,1);
+}
+function renderForn(data,page){
+  window._fd=data;
+  const tot=data.length,s=(page-1)*PAGE,sl=data.slice(s,s+PAGE);
+  document.getElementById('f-info').textContent=
+    `${Math.min(s+1,tot).toLocaleString('pt-BR')}–${Math.min(s+PAGE,tot).toLocaleString('pt-BR')} de ${tot.toLocaleString('pt-BR')} registros`;
+  document.getElementById('f-body').innerHTML=sl.map(r=>`
+    <tr>
+      <td>${badge(r.doc)}</td>
+      <td class="mono">${short(r.np)}</td>
+      <td class="mono">${escH(r.nf)||'—'}</td>
+      <td class="nat">${escH(r.nat)||'—'}</td>
+      <td>${fmtD(r.dt_em)}</td>
+      <td>${fmtD(r.dt_pg)}</td>
+      <td class="vd">R$ ${fmtN(r.val)}</td>
+      <td><button class="btn btn-s" style="padding:3px 9px;font-size:.72rem"
+        onclick='openMod(${JSON.stringify(r)})'>Ver</button></td>
+    </tr>`).join('');
+  renderPag('f-pag',tot,page,'renderForn','_fd');
+}
+
+// ── PAGINAÇÃO ──
+function renderPag(cid,tot,cur,fn,dvar){
+  const pages=Math.ceil(tot/PAGE),el=document.getElementById(cid);
+  if(pages<=1){el.innerHTML='';return;}
+  const b=(p,lbl,dis)=>dis
+    ?`<button class="pb" disabled>${lbl}</button>`
+    :`<button class="pb ${p===cur?'on':''}" onclick="${fn}(window.${dvar},${p})">${lbl}</button>`;
+  let h=b(cur-1,'‹',cur===1);
+  let s=Math.max(1,cur-2),e=Math.min(pages,cur+2);
+  if(s>1){h+=b(1,1,false);if(s>2)h+='<span style="padding:0 4px">…</span>';}
+  for(let i=s;i<=e;i++)h+=b(i,i,false);
+  if(e<pages){if(e<pages-1)h+='<span style="padding:0 4px">…</span>';h+=b(pages,pages,false);}
+  h+=b(cur+1,'›',cur===pages);
+  h+=`<span style="font-size:.72rem;color:#5d7285;margin-left:6px">Pág ${cur}/${pages}</span>`;
+  el.innerHTML=h;
+}
+
+// ── MODAL ──
+function openMod(r){
+  if(typeof r==='string')r=JSON.parse(r);
+  document.getElementById('mod-body').innerHTML=`
+    <div class="dg">
+      <div class="di"><label>Documento NP</label><span>${escH(r.np)||'—'}</span></div>
+      <div class="di"><label>Documento OB/DF</label><span>${escH(r.doc)||'—'}</span></div>
+      <div class="di"><label>Nota de Empenho</label><span>${escH(r.emp)||'—'}</span></div>
+      <div class="di"><label>Nota Fiscal</label><span>${escH(r.nf)||'—'}</span></div>
+      <div class="di full"><label>Fornecedor</label><span>${escH(r.forn)||'—'}</span></div>
+      <div class="di full"><label>Natureza Despesa</label><span>${escH(r.nat)||'—'}</span></div>
+      <div class="di"><label>Data Emissão</label><span>${fmtD(r.dt_em)}</span></div>
+      <div class="di"><label>Data Ateste</label><span>${fmtD(r.dt_at)}</span></div>
+      <div class="di"><label>Data Pagamento</label><span>${fmtD(r.dt_pg)}</span></div>
+      <div class="di"><label>Data Emissão NF</label><span>${fmtD(r.dt_nf)}</span></div>
+      <div class="di"><label>Valor NF</label><span>R$ ${fmtN(r.val_nf)}</span></div>
+      <div class="di"><label>Valor Pago</label><span class="dival">R$ ${fmtN(r.val)}</span></div>
+      <div class="di full"><label>Observação</label>
+        <span style="font-size:.8rem;font-weight:400">${escH(r.obs)||'—'}</span></div>
+    </div>`;
+  document.getElementById('modal').classList.add('open');
+}
+function closeMod(e){if(e.target===document.getElementById('modal'))document.getElementById('modal').classList.remove('open');}
+
+// ── BOOTSTRAP ──
+loadCSVs()
+  .then(()=>{
+    document.getElementById('overlay').style.display='none';
+    init();
+  })
+  .catch(err=>{
+    document.getElementById('overlay').style.display='none';
+    const el=document.getElementById('erro');
+    el.style.display='block';
+    document.getElementById('erro-msg').innerHTML=
+      `<p><strong>${err.message}</strong></p>
+       <code>Verifique se os arquivos <b>dh_tempos.csv</b> e <b>obs_pagas.csv</b> estão na mesma pasta que o index.html no repositório GitHub.</code>`;
+  });
+</script>
+</body>
+</html>
