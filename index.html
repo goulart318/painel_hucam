@@ -260,30 +260,30 @@ const badge = d => { const t=dType(d); return t==='OB'?'<span class="badge b-ob"
 const killC = id => { if(charts[id]){charts[id].destroy();delete charts[id];} };
 const escH = s => String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
 
+  function parseFile(url, skipFirst = false) {
+  return new Promise((resolve, reject) => {
+    Papa.parse(url, {
+      download: true,
+      header: true,
+      delimiter: '\t',
+      encoding: 'ISO-8859-1',
+      skipEmptyLines: true,
+      skipFirstNLines: skipFirst ? 1 : 0,
+      complete: results => resolve(results.data),
+      error: err => reject(err)
+    });
+  });
+}
+
 // ── LOAD ──
 function loadCSVs() {
-  const baseCfg = {
-    download:true,
-    header:true,
-    delimiter:'\t',
-    skipEmptyLines:true,
-    encoding:'ISO-8859-1',
-    dynamicTyping:false
-  };
 
   return Promise.all([
-    new Promise((res,rej) => Papa.parse(CSV_DH, {
-      ...baseCfg,
-      complete:r=>res(r.data),
-      error:e=>rej(new Error('dh_tempos.csv: '+e.message))
-    })),
-    new Promise((res,rej) => Papa.parse(CSV_OBS, {
-      ...baseCfg,
-      skipFirstNLines:1,
-      complete:r=>res(r.data),
-      error:e=>rej(new Error('obs_pagas.csv: '+e.message))
-    }))
-  ]).then(([dh, obs]) => {
+    parseFile(CSV_DH),
+    parseFile(CSV_OBS, true)
+  ])
+
+  .then(([dh, obs]) => {
 
     // Relaciona NP (Documento Hábil) do arquivo dh_tempos
     // com os pagamentos existentes em obs_pagas
@@ -647,6 +647,8 @@ function openMod(r){
   document.getElementById('modal').classList.add('open');
 }
 function closeMod(e){if(e.target===document.getElementById('modal'))document.getElementById('modal').classList.remove('open');}
+
+  
 
 // ── BOOTSTRAP ──
 loadCSVs()
