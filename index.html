@@ -285,6 +285,9 @@ function loadCSVs() {
 
   .then(([dh, obs]) => {
 
+    console.log('DH:', dh);
+    console.log('OBS:', obs);
+    
     // Relaciona NP (Documento Hábil) do arquivo dh_tempos
     // com os pagamentos existentes em obs_pagas
     const dhIdx = {};
