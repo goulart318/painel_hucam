@@ -324,16 +324,31 @@ const obs = obsLines
       .split('\t')
       .map(c => c.replace(/"/g,'').trim());
 
-    const row = {};
+    return {
 
-    obsHeader.forEach((h,i) => {
-      row[h || `COL_${i}`] = cols[i] || '';
-    });
+      emissao: cols[0] || '',
 
-    return row;
+      empenho: cols[1] || '',
+
+      favorecido_cnpj: cols[2] || '',
+
+      favorecido_nome: cols[3] || '',
+
+      np: cols[4] || '',
+
+      documento: cols[5] || '',
+
+      natureza_cod: cols[6] || '',
+
+      natureza_desc: cols[7] || '',
+
+      observacao: cols[8] || '',
+
+      valor: cols[9] || ''
+
+    };
 
   });
-
 console.log(obsHeader);
 console.log(obs[0]);
 
@@ -350,7 +365,7 @@ console.log(obs[0]);
 
   dh.forEach(r => {
 
-    const np = String(r['Documento Hábil'] || '').trim();
+    const np = String(r.np || '').trim();
 
     if(!np) return;
 
@@ -386,28 +401,23 @@ console.log(obs[0]);
 
       np,
 
-      doc: String(r['Documento'] || '').trim(),
+      doc: String(r.documento || '').trim(),
 
-      emp: String(r['Empenho'] || '').trim(),
+emp: String(r.empenho || '').trim(),
 
-      forn:
-        String(
-          r['NE CCor - Favorecido'] || ''
-        ).trim(),
+forn: [
+  r.favorecido_cnpj,
+  r.favorecido_nome
+].filter(Boolean).join(' - '),
 
-      nat:
-        String(
-          r['Natureza Despesa Detalhada'] || ''
-        ).trim(),
+nat: [
+  r.natureza_cod,
+  r.natureza_desc
+].filter(Boolean).join(' - '),
 
-      obs:
-        String(
-          r['Doc - Observação'] || ''
-        ).trim(),
+obs: String(r.observacao || '').trim(),
 
-      val: parseBR(
-        r['Movim. Líquido - Moeda Origem (Item Informação)'] || '0'
-      ),
+val: parseBR(r.valor || '0'),
 
       dt_em: toISO(r['Emissão']),
 
