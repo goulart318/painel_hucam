@@ -183,18 +183,19 @@ tbody td{padding:7px 10px;vertical-align:top}
 
   <div id="tab-forn" class="panel">
     <div class="filters">
-      <div class="fg" style="min-width:300px">
+      <div class="fg" style="min-width:450px; position:relative">
         <label>Fornecedor</label>
-        <select id="f-sel"><option value="">— Selecione —</option></select>
+        <input type="text" id="f-search" placeholder="🔍 Digite o nome para buscar (ex: TEKNO)..." oninput="liveSearchForn()" autocomplete="off">
+        <div id="f-results" style="position:absolute; top:100%; left:0; right:0; background:#fff; border:1px solid #d0dae4; border-radius:0 0 10px 10px; z-index:1000; max-height:300px; overflow-y:auto; display:none; box-shadow:0 12px 30px rgba(0,0,0,0.15)"></div>
       </div>
-      <div class="fg"><label>Ano</label><select id="f-ano"><option value="">Todos</option></select></div>
+      <div class="fg"><label>Ano</label><select id="f-ano" onchange="applyForn()"><option value="">Todos</option></select></div>
       <div style="display:flex;align-items:flex-end;padding-bottom:8px">
         <label style="display:flex;align-items:center;gap:5px;font-size:0.75rem;font-weight:700;color:#1a3a5c;cursor:pointer">
           <input type="checkbox" id="f-grp" checked onchange="if(window._fd) renderForn(window._fd, 1)"> Agrupar por NP/NF
         </label>
       </div>
       <div style="display:flex;gap:8px;align-items:flex-end;margin-left:auto">
-        <button class="btn btn-p" onclick="applyForn()">📋 Consultar</button>
+        <button class="btn btn-s" onclick="document.getElementById('f-search').value=''; applyForn()">✕ Limpar</button>
         <button class="btn btn-p" onclick="exportData(FF, 'fornecedor')" style="background:#27ae60">💾 Exportar</button>
       </div>
     </div>
@@ -237,6 +238,7 @@ const CSV_OBS = './obs_pagas.csv';
 
 const PAGE = 25;
 let ALL = [], FD = [], FC = [], FF = [];
+let allForns = [];
 let charts = {};
 const COLORS = ['#1a3a5c','#2980b9','#1e8449','#27ae60','#e67e22','#d35400','#8e44ad','#c0392b','#16a085','#2c3e50'];
 
@@ -395,7 +397,7 @@ async function loadCSVs() {
 function init() {
     const anos = [...new Set(ALL.map(r=>r.ano).filter(Boolean))].sort();
     const nats = [...new Set(ALL.map(r=>r.nat).filter(Boolean))].sort();
-    const forns = [...new Set(ALL.map(r=>r.forn).filter(Boolean))].sort();
+    allForns = [...new Set(ALL.map(r=>r.forn).filter(Boolean))].sort();
 
     ['d-ano','q-ano','f-ano'].forEach(id => {
         const el=document.getElementById(id);
@@ -407,9 +409,6 @@ function init() {
         el.innerHTML = '<option value="">Todas</option>';
         nats.forEach(n => el.innerHTML+=`<option value="${escH(n)}">${escH(n)}</option>`);
     });
-    const fSel=document.getElementById('f-sel');
-    fSel.innerHTML = '<option value="">— Selecione —</option>';
-    forns.forEach(f => fSel.innerHTML+=`<option value="${escH(f)}">${escH(f)}</option>`);
 
     const dts=ALL.map(r=>r.dt_em).filter(Boolean).sort();
     if(dts.length){
@@ -420,6 +419,46 @@ function init() {
     document.getElementById('upd-txt').textContent=`Atualizado: ${new Date().toLocaleDateString('pt-BR')}`;
 
     renderDash(ALL);
+}
+
+function liveSearchForn() {
+    const txt = document.getElementById('f-search').value.toLowerCase();
+    const res = document.getElementById('f-results');
+    if (txt.length < 2) { res.style.display = 'none'; return; }
+    
+    const filtered = allForns.filter(f => f.toLowerCase().includes(txt)).slice(0, 15);
+    if (!filtered.length) { 
+        res.innerHTML = '<div style="padding:12px; color:#999; font-size:0.8rem">Nenhum fornecedor encontrado</div>';
+        res.style.display = 'block';
+        return; 
+    }
+    
+    res.innerHTML = filtered.map(f => `
+        <div style="padding:10px 14px; cursor:pointer; border-bottom:1px solid #f0f4f8; font-size:0.82rem; transition:background 0.2s" 
+             onmouseover="this.style.background='#f4f8fc'" onmouseout="this.style.background='#fff'"
+             onclick="selectForn('${f.replace(/'/g, "\\'")}')">
+            ${f.replace(new RegExp(txt, 'gi'), m => `<b>${m}</b>`)}
+        </div>
+    `).join('');
+    res.style.display = 'block';
+}
+
+function selectForn(f) {
+    document.getElementById('f-search').value = f;
+    document.getElementById('f-results').style.display = 'none';
+    applyForn();
+}
+
+// Fechar resultados ao clicar fora
+document.addEventListener('click', (e) => {
+    const res = document.getElementById('f-results');
+    if (res && !document.getElementById('f-search').contains(e.target) && !res.contains(e.target)) {
+        res.style.display = 'none';
+    }
+});
+
+function filterForn() {
+    // Função legada removida
 }
 
 function showTab(id){
@@ -552,8 +591,11 @@ function renderCons(data,page){
 }
 
 function applyForn(){
-    const forn=document.getElementById('f-sel').value, ano=document.getElementById('f-ano').value;
-    if(!forn)return;
+    const forn=document.getElementById('f-search').value, ano=document.getElementById('f-ano').value;
+    if(!forn) {
+        document.getElementById('f-detail').style.display='none';
+        return;
+    }
     FF=ALL.filter(r=>r.forn===forn&&(!ano||r.ano===ano));
     window._fd=FF;
     document.getElementById('f-detail').style.display='block';
