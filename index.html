@@ -260,119 +260,157 @@ const badge = d => { const t=dType(d); return t==='OB'?'<span class="badge b-ob"
 const killC = id => { if(charts[id]){charts[id].destroy();delete charts[id];} };
 const escH = s => String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
 
-  function parseFile(url, skipFirst = false) {
-  return new Promise((resolve, reject) => {
-    Papa.parse(url, {
-      download: true,
-      header: true,
-      delimiter: '\t',
-      encoding: 'ISO-8859-1',
-      skipEmptyLines: true,
-      skipFirstNLines: skipFirst ? 1 : 0,
-      complete: results => resolve(results.data),
-      error: err => reject(err)
-    });
-  });
-}
-
+  
 // ── LOAD ──
-function loadCSVs() {
+async function loadCSVs() {
 
-  return Promise.all([
-    parseFile(CSV_DH),
-    parseFile(CSV_OBS, true)
-  ])
+  async function fetchText(url) {
 
-  .then(([dh, obs]) => {
+    const resp = await fetch(url);
 
-    console.log('DH:', dh);
-    console.log('OBS:', obs);
-    
-    // Relaciona NP (Documento Hábil) do arquivo dh_tempos
-    // com os pagamentos existentes em obs_pagas
-    const dhIdx = {};
+    const buffer = await resp.arrayBuffer();
 
-    dh.forEach(r => {
-      const np = String(r['Documento Hábil'] || '').trim();
+    return new TextDecoder('utf-16le').decode(buffer);
 
-      if(!np || np === 'Total') return;
+  }
 
-      if(!dhIdx[np]) {
-        dhIdx[np] = [];
+  function parseCSV(text, delimiter, skipLines = 0) {
+
+    return Papa.parse(text, {
+
+      header: true,
+
+      delimiter: delimiter,
+
+      skipEmptyLines: true,
+
+      skipFirstNLines: skipLines,
+
+      transformHeader: h =>
+        String(h || '')
+          .replace(/"/g,'')
+          .trim()
+
+    }).data;
+
+  }
+
+  // =========================
+  // CARREGA ARQUIVOS
+  // =========================
+
+  const obsText = await fetchText(CSV_OBS);
+
+  const dhText  = await fetchText(CSV_DH);
+
+  // =========================
+  // PARSE
+  // =========================
+
+  const obs = parseCSV(obsText, '\t', 2);
+
+  const dh  = parseCSV(dhText, ',', 0);
+
+  console.log('OBS:', obs);
+  console.log('DH:', dh);
+
+  // =========================
+  // INDEXAÇÃO DH
+  // =========================
+
+  const dhIdx = {};
+
+  dh.forEach(r => {
+
+    const np = String(r['Documento Hábil'] || '').trim();
+
+    if(!np) return;
+
+    dhIdx[np] = {
+
+      nf: String(r['Nota Fiscal'] || '').trim(),
+
+      val_nf: parseBR(r['Valor da NF'] || '0'),
+
+      dt_pg: toISO(r['Compr. - Dia Pagamento']),
+
+      dt_at: toISO(r['DH - Dia Ateste']),
+
+      dt_nf: toISO(r['Data de Emissão da NF'])
+
+    };
+
+  });
+
+  // =========================
+  // NORMALIZA OBS
+  // =========================
+
+  ALL = obs.map(r => {
+
+    const np = String(r['NP'] || '').trim();
+
+    if(!np) return null;
+
+    const rel = dhIdx[np] || {};
+
+    return {
+
+      np,
+
+      doc: String(r['Documento'] || '').trim(),
+
+      emp: String(r['Empenho'] || '').trim(),
+
+      forn:
+        String(
+          r['NE CCor - Favorecido'] || ''
+        ).trim(),
+
+      nat:
+        String(
+          r['Natureza Despesa Detalhada'] || ''
+        ).trim(),
+
+      obs:
+        String(
+          r['Doc - Observação'] || ''
+        ).trim(),
+
+      val: parseBR(
+        r['Movim. Líquido - Moeda Origem (Item Informação)'] || '0'
+      ),
+
+      dt_em: toISO(r['Emissão']),
+
+      nf: rel.nf || '',
+
+      val_nf: rel.val_nf || 0,
+
+      dt_pg: rel.dt_pg || '',
+
+      dt_at: rel.dt_at || '',
+
+      dt_nf: rel.dt_nf || '',
+
+      get am() {
+        return this.dt_em ? this.dt_em.slice(0,7) : '';
+      },
+
+      get ano() {
+        return this.dt_em ? this.dt_em.slice(0,4) : '';
       }
 
-      dhIdx[np].push({
-        nf: String(r['Nota Fiscal'] || '').trim(),
-        val_nf: parseBR(r['Valor da NF'] || '0'),
-        dt_pg: toISO(r['Compr. - Dia Pagamento']),
-        dt_at: toISO(r['DH - Dia Ateste']),
-        dt_nf: toISO(r['Data de Emissão da NF'])
-      });
-    });
+    };
 
-    ALL = obs.map(r => {
-      console.log(r);
+  }).filter(Boolean);
 
-      const np  = String(r['NP'] || '').trim();
+  FD = [...ALL];
+  FC = [...ALL];
 
-      if(!np || np === 'Total') return null;
+  return ALL;
 
-      const doc = String(r['Documento'] || '').trim();
-      const rel = (dhIdx[np] || [])[0] || {};
-
-      const fornecedor =
-        String(
-          r['Fornecedor'] ||
-          r['Unnamed: 3'] ||
-          ''
-        ).trim();
-
-      const natureza =
-        String(
-          r['Natureza_Despesa'] ||
-          r['Unnamed: 7'] ||
-          r['Natureza Despesa Detalhada'] ||
-          ''
-        ).trim();
-
-      const valorRaw =
-        r['Valor'] ||
-        r['Movim. Líquido - Moeda Origem (Item Informação)'] ||
-        '0';
-
-      return {
-        np,
-        doc,
-        emp: String(r['Empenho'] || '').trim(),
-        nat: natureza,
-        obs: String(r['Doc - Observação'] || r['Observacao'] || '').slice(0,300),
-        val: parseBR(valorRaw),
-        forn: fornecedor,
-        nf: rel.nf || '',
-        val_nf: rel.val_nf || 0,
-        dt_em: toISO(r['Emissão']),
-        dt_pg: rel.dt_pg || '',
-        dt_at: rel.dt_at || '',
-        dt_nf: rel.dt_nf || '',
-
-        get am() {
-          return this.dt_em ? this.dt_em.slice(0,7) : '';
-        },
-
-        get ano() {
-          return this.dt_em ? this.dt_em.slice(0,4) : '';
-        }
-      };
-
-    }).filter(r => r && (r.val > 0 || r.np));
-
-    FD=[...ALL];
-    FC=[...ALL];
-
-    return ALL;
-  });
 }
-
   
 
 // ── INIT ──
