@@ -307,7 +307,35 @@ async function loadCSVs() {
   // PARSE
   // =========================
 
-  const obs = parseCSV(obsText, '\t', 2);
+  const obsLines = obsText
+  .split(/\r?\n/)
+  .filter(l => l.trim());
+
+const obsHeader =
+  obsLines[2]
+    .split('\t')
+    .map(h => h.replace(/"/g,'').trim());
+
+const obs = obsLines
+  .slice(3)
+  .map(line => {
+
+    const cols = line
+      .split('\t')
+      .map(c => c.replace(/"/g,'').trim());
+
+    const row = {};
+
+    obsHeader.forEach((h,i) => {
+      row[h || `COL_${i}`] = cols[i] || '';
+    });
+
+    return row;
+
+  });
+
+console.log(obsHeader);
+console.log(obs[0]);
 
   const dh  = parseCSV(dhText, ',', 0);
 
