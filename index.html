@@ -256,7 +256,7 @@ async function loadCSVs() {
         const resp = await fetch(url);
         if(!resp.ok) throw new Error("Não foi possível carregar " + url);
         const buffer = await resp.arrayBuffer();
-        return new TextDecoder('utf-8').decode(buffer);
+        return new TextDecoder('windows-1252').decode(buffer);
     }
 
     const [dhRaw, obsRaw] = await Promise.all([fetchText(CSV_DH), fetchText(CSV_OBS)]);
@@ -268,11 +268,14 @@ async function loadCSVs() {
         delimiter: ","
     }).data;
 
-    const dhIdx = {};
+    const dhIdxByDoc = {};
+    const dhIdxByNp = {};
+    
     dhData.forEach(r => {
+        const doc = String(r['Documento'] || '').trim();
         const np = String(r['Documento Hábil'] || '').trim();
-        if(!np) return;
-        dhIdx[np] = {
+        
+        const data = {
             nf: r['Nota Fiscal'] || '',
             val_nf: parseBR(r['Valor da NF']),
             dt_pg: toISO(r['Compr. - Dia Pagamento']),
@@ -280,29 +283,45 @@ async function loadCSVs() {
             dt_nf: toISO(r['Data de Emissão da NF']),
             forn_nome: r[''] || r['Unnamed: 3'] || '' // Trata coluna de nome vazia
         };
+
+        if(doc) dhIdxByDoc[doc] = data;
+        if(np) dhIdxByNp[np] = data;
     });
 
     // PARSE OBS_PAGAS (Delimitador Tabulação, pula cabeçalho do sistema)
     const obsLines = obsRaw.split(/\r?\n/).filter(l => l.trim());
+    
     // Localiza a linha do cabeçalho real (que contém "Emissão" e "Empenho")
     let headerIdx = obsLines.findIndex(l => l.includes('Emissão') && l.includes('Empenho'));
-    if(headerIdx === -1) headerIdx = 2; // Fallback
-
-    const dataRows = obsLines.slice(headerIdx + 1);
+    let dataRows = [];
+    if (headerIdx !== -1) {
+        dataRows = obsLines.slice(headerIdx + 1);
+    } else {
+        // Se não encontrou cabeçalho, verifica se a primeira linha já é dado (ex: data "dd/mm/yyyy")
+        if (obsLines[0] && obsLines[0].match(/^"\d{2}\/\d{2}\/\d{4}"/)) {
+            dataRows = obsLines;
+        } else {
+            // Fallback para pular as 3 primeiras linhas como no código original
+            dataRows = obsLines.slice(3);
+        }
+    }
 
     ALL = dataRows.map(line => {
         const cols = line.split('\t').map(c => c.replace(/"/g,'').trim());
         if(cols.length < 5) return null;
 
         const np = cols[4];
-        const rel = dhIdx[np] || {};
+        const doc = cols[5];
+        
+        // Relação principal via Documento (coluna exclusiva), fallback para NP (Documento Hábil)
+        const rel = dhIdxByDoc[doc] || dhIdxByNp[np] || {};
 
         return {
             dt_em: toISO(cols[0]),
             emp: cols[1],
             forn: (cols[2] + ' - ' + (cols[3] || rel.forn_nome || '')).trim(),
             np: np,
-            doc: cols[5],
+            doc: doc,
             nat: (cols[6] + ' - ' + cols[7]).trim(),
             obs: cols[8],
             val: parseBR(cols[9]),
