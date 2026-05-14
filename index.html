@@ -364,46 +364,17 @@ const obs = obsLines
 console.log(obsHeader);
 console.log(obs[0]);
 
-  const dhLines = dhText
-  .split(/\r?\n/)
-  .filter(l => l.trim());
+  const dh = Papa.parse(dhText, {
+  header: true,
+  skipEmptyLines: true,
+  delimiter: ',',
+  transformHeader: h =>
+    String(h || '')
+      .replace(/"/g,'')
+      .trim()
+}).data;
 
-const dh = dhLines
-  .slice(1)
-  .map(line => {
-
-    const cols = line
-      .split('\t')
-      .map(c => c.replace(/"/g,'').trim());
-
-    return {
-
-      documento_habil: cols[0] || '',
-
-      nota_empenho: cols[1] || '',
-
-      fornecedor_cnpj: cols[2] || '',
-
-      fornecedor_nome: cols[3] || '',
-
-      nota_fiscal: cols[4] || '',
-
-      valor_nf: cols[5] || '',
-
-      data_emissao_nf: cols[6] || '',
-
-      dia_ateste: cols[7] || '',
-
-      dia_emissao: cols[8] || '',
-
-      dia_pagamento: cols[9] || '',
-
-      documento: cols[10] || ''
-
-    };
-
-  });
-
+  console.log(dh[0]);
   console.log('OBS:', obs);
   console.log('DH:', dh);
 
