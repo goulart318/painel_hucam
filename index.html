@@ -238,14 +238,26 @@ const COLORS = ['#1a3a5c','#2980b9','#1e8449','#27ae60','#e67e22','#d35400','#8e
 // ── UTILS ──
 // Converte valor BR "1.234,56" para número
 const parseBR = s => {
-  if(!s || s==='' ) return 0;
-  return parseFloat(String(s).replace(/\./g,'').replace(',','.')) || 0;
+
+  if(s == null) return 0;
+
+  s = String(s).trim();
+
+  if(!s) return 0;
+
+  return Number(
+    s
+      .replace(/\./g,'')
+      .replace(',', '.')
+      .replace(/\s/g,'')
+  ) || 0;
+
 };
-const fmt = v => (v==null||v==='')?'—':parseBR(v)===0&&v!=='0'?v:parseBR(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
-const fmtN = v => v==null||v===0?'—':v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const fmt = v => (v==null||v==='')?'—':parseBR(v)===0&&v!=='0'?v:parseBR(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const fmtN = v => v==null||v===0?'—':v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
 
 // Converte dd/mm/yyyy → yyyy-mm-dd
-const toISO = s => {
+  const toISO = s => {
   if(!s) return '';
   s = String(s).trim();
   const m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
@@ -352,7 +364,45 @@ const obs = obsLines
 console.log(obsHeader);
 console.log(obs[0]);
 
-  const dh  = parseCSV(dhText, ',', 0);
+  const dhLines = dhText
+  .split(/\r?\n/)
+  .filter(l => l.trim());
+
+const dh = dhLines
+  .slice(1)
+  .map(line => {
+
+    const cols = line
+      .split('\t')
+      .map(c => c.replace(/"/g,'').trim());
+
+    return {
+
+      documento_habil: cols[0] || '',
+
+      nota_empenho: cols[1] || '',
+
+      fornecedor_cnpj: cols[2] || '',
+
+      fornecedor_nome: cols[3] || '',
+
+      nota_fiscal: cols[4] || '',
+
+      valor_nf: cols[5] || '',
+
+      data_emissao_nf: cols[6] || '',
+
+      dia_ateste: cols[7] || '',
+
+      dia_emissao: cols[8] || '',
+
+      dia_pagamento: cols[9] || '',
+
+      documento: cols[10] || ''
+
+    };
+
+  });
 
   console.log('OBS:', obs);
   console.log('DH:', dh);
@@ -365,26 +415,29 @@ console.log(obs[0]);
 
   dh.forEach(r => {
 
-    const np = String(r.np || '').trim();
+  const np = String(r.documento_habil || '').trim();
 
-    if(!np) return;
+  if(!np) return;
 
-    dhIdx[np] = {
+  dhIdx[np] = {
 
-      nf: String(r['Nota Fiscal'] || '').trim(),
+    nf: String(r.nota_fiscal || '').trim(),
 
-      val_nf: parseBR(r['Valor da NF'] || '0'),
+    val_nf: parseBR(r.valor_nf || '0'),
 
-      dt_pg: toISO(r['Compr. - Dia Pagamento']),
+    dt_pg: toISO(r.dia_pagamento),
 
-      dt_at: toISO(r['DH - Dia Ateste']),
+    dt_at: toISO(r.dia_ateste),
 
-      dt_nf: toISO(r['Data de Emissão da NF'])
+    dt_nf: toISO(r.data_emissao_nf),
 
-    };
+    fornecedor_cnpj: String(r.fornecedor_cnpj || '').trim(),
 
-  });
+    fornecedor_nome: String(r.fornecedor_nome || '').trim()
 
+  };
+
+});
   // =========================
   // NORMALIZA OBS
   // =========================
@@ -443,6 +496,10 @@ val: parseBR(r.valor || '0'),
 
   }).filter(Boolean);
 
+  console.log('TOTAL ALL:', ALL.length);
+  console.log('PRIMEIRO ITEM:', ALL[0]);
+  console.log('VALORES:', ALL.slice(0,5).map(x => x.val));
+  
   FD = [...ALL];
   FC = [...ALL];
 
