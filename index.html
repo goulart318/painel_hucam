@@ -9,7 +9,7 @@
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f4f8;color:#1a2535;font-size:14px}
-.hdr{background:linear-gradient(135deg,#1a3a5c 0%,#0e2340 100%);color:#fff;padding:18px 28px;display:flex;align-items:center;gap:16px;box-shadow:0 2px 12px rgba(0,0,0,.3)}
+.hdr{background:linear-gradient(135deg,#1a3a5c 0%,#0e2340 100%);color:#fff;padding:12px 28px;display:flex;align-items:center;justify-content:space-between;gap:16px;box-shadow:0 2px 12px rgba(0,0,0,.3)}
 .hdr-icon{font-size:2rem}
 .hdr h1{font-size:1.3rem;font-weight:700}
 .hdr p{font-size:.78rem;opacity:.75;margin-top:2px}
@@ -86,7 +86,7 @@ tbody td{padding:7px 10px;vertical-align:top}
 .di span{font-size:.85rem;font-weight:600}
 .di.full{grid-column:1/-1}
 .dival{font-size:1.2rem!important;color:#1e8449!important}
-@media(max-width:768px){.crow,.crow2{grid-template-columns:1fr}.main{padding:12px}.fn{flex:0 0 130px}}
+@media(max-width:768px){.crow,.crow2{grid-template-columns:1fr}.main{padding:12px}.fn{flex:0 0 130px}.hdr{flex-direction:column;gap:12px;padding:16px}.hdr-meta{margin-left:0;text-align:center}}
 </style>
 </head>
 <body>
@@ -102,11 +102,14 @@ tbody td{padding:7px 10px;vertical-align:top}
 </div>
 
 <div class="hdr">
-  <div class="hdr-icon">🏥</div>
-  <div>
-    <h1>Ordens Bancárias Pagas — HUCAM/UFES</h1>
-    <p>Consulta de documentos pagos · Fornecedores e Gestores de Contratos</p>
+  <div style="display:flex;align-items:center;gap:16px">
+    <div class="hdr-icon">🏥</div>
+    <div>
+      <h1>Ordens Bancárias Pagas — HUCAM/UFES</h1>
+      <p>Consulta de documentos pagos · Fornecedores e Gestores de Contratos</p>
+    </div>
   </div>
+  <img src="Logo.png" alt="Logo" style="height: 50px; object-fit: contain;">
   <div class="hdr-meta">
     <div class="upd"><span class="dot"></span><span id="upd-txt">carregando...</span></div>
     <div id="periodo-txt"></div>
@@ -154,7 +157,7 @@ tbody td{padding:7px 10px;vertical-align:top}
         <select id="q-tipo" onchange="applyConsulta()">
           <option value="">Todos</option>
           <option value="OB">OB – Ordem Bancária</option>
-          <option value="DF">DF – DARF - Retenção Tributos</option>
+          <option value="DF">DF – Devolução/Tributo</option>
         </select>
       </div>
       <div style="display:flex;gap:8px;align-items:flex-end;margin-left:auto">
