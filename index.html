@@ -509,6 +509,25 @@ function applyForn(){
         <div class="kpi"><div class="kpi-lbl">Total</div><div class="kpi-val">R$ ${fmtN(tot)}</div></div>
         <div class="kpi g"><div class="kpi-lbl">Docs NP</div><div class="kpi-val">${new Set(FF.map(r=>r.np)).size}</div></div>
         <div class="kpi a"><div class="kpi-lbl">Notas Fiscais</div><div class="kpi-val">${new Set(FF.map(r=>r.nf).filter(Boolean)).size}</div></div>`;
+        
+    const bM={}; FF.forEach(r=>{if(r.am)bM[r.am]=(bM[r.am]||0)+r.val;});
+    const ms=Object.keys(bM).sort();
+    killC('cFM');
+    charts.cFM=new Chart(document.getElementById('cFM'),{
+        type:'bar',
+        data:{labels:ms.map(m=>m.split('-')[1]+'/'+m.split('-')[0]), datasets:[{data:ms.map(m=>bM[m]),backgroundColor:'#2980b9'}]},
+        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}
+    });
+
+    const bN={}; FF.forEach(r=>{if(r.nat)bN[r.nat]=(bN[r.nat]||0)+r.val;});
+    const nk=Object.keys(bN).sort((a,b)=>bN[b]-bN[a]).slice(0,8);
+    killC('cFN');
+    charts.cFN=new Chart(document.getElementById('cFN'),{
+        type:'doughnut',
+        data:{labels:nk.map(k=>k.length>20?k.slice(0,20)+'...':k), datasets:[{data:nk.map(k=>bN[k]),backgroundColor:COLORS}]},
+        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}}}
+    });
+
     renderForn(FF,1);
 }
 
