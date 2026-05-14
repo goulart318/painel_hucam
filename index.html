@@ -256,7 +256,17 @@ async function loadCSVs() {
         const resp = await fetch(url);
         if(!resp.ok) throw new Error("Não foi possível carregar " + url);
         const buffer = await resp.arrayBuffer();
-        return new TextDecoder('windows-1252').decode(buffer);
+        const bytes = new Uint8Array(buffer);
+        let text = '';
+        // Verifica se há BOM (Byte Order Mark) do UTF-16LE (típico de exports Tesouro Gerencial)
+        if (bytes.length >= 2 && bytes[0] === 0xFF && bytes[1] === 0xFE) {
+            text = new TextDecoder('utf-16le').decode(buffer);
+        } else {
+            text = new TextDecoder('windows-1252').decode(buffer);
+        }
+        // Remove o BOM se ainda estiver presente na string resultante
+        if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+        return text;
     }
 
     const [dhRaw, obsRaw] = await Promise.all([fetchText(CSV_DH), fetchText(CSV_OBS)]);
